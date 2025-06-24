@@ -1,0 +1,36 @@
+# dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# build
+.build
+.serverless
+dist
+
+# environment
+.env
+.env.local
+.env.*
+!.env.example
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# MacOS
+.DS_Store
+
+# IDE
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+
+# Serverless
+.serverless
+
+# TypeScript
+tsconfig.tsbuildinfo

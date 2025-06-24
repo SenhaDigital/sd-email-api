@@ -1,0 +1,99 @@
+service: sd-email-api
+
+plugins:
+  - serverless-offline
+  - serverless-plugin-typescript
+  - serverless-domain-manager
+  # serverless-dynamodb-local removido, pois MongoDB é usado agora
+
+custom:
+  # Carrega variáveis do arquivo de ambiente baseado no stage
+  customDomain:
+    domainName: ${self:provider.environment.DOMAIN_NAME}
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+  # Nome dos recursos baseado no ambiente
+  # MongoDB config
+  mongoCollection: ${self:provider.environment.EMAIL_COLLECTION}
+  mongoDatabaseName: ${self:provider.environment.DATABASE_NAME}
+  # SQS queues
+  emailQueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}
+  sendEmailQueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${self:provider.environment.REGION}
+  profile: ${self:provider.environment.PROFILE}
+  # Carrega variáveis de arquivo dependendo do stage
+  environment: ${file(env.${self:provider.stage}.yml)}
+  # Aumentando o timeout para permitir o envio de emails (30 segundos)
+  timeout: 30
+  
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+      Resource: "*"
+    # MongoDB é usado em vez de DynamoDB, sem necessidade de permissões IAM
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+      Resource: 
+        - !GetAtt EmailQueue.Arn
+        - !GetAtt SendEmailQueue.Arn
+
+functions:
+  api:
+    handler: src/handlers/api.handler
+    events:
+      - http:
+          path: /api/email/send
+          method: post
+          cors: true
+      - http:
+          path: /api/email/validate-email
+          method: post
+          cors: true
+      - http:
+          path: /api/email/status/{jobId}
+          method: get
+          cors: true
+
+  processEmail:
+    handler: src/handlers/validator.handler
+    events:
+      - sqs:
+          arn: !GetAtt EmailQueue.Arn
+          batchSize: 1
+
+  sendEmail:
+    handler: src/handlers/sender.handler
+    events:
+      - sqs:
+          arn: !GetAtt SendEmailQueue.Arn
+          batchSize: 1
+
+resources:
+  Resources:
+    # Removido EmailTable - MongoDB é usado em vez de DynamoDB
+
+    EmailQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}
+        VisibilityTimeout: 60
+        MessageRetentionPeriod: 1209600 # 14 days
+
+    SendEmailQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}
+        VisibilityTimeout: 180
+        MessageRetentionPeriod: 1209600 # 14 days
