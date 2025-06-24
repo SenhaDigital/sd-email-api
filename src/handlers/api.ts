@@ -1,10 +1,11 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { SQS } from '@aws-sdk/client-sqs';
 import { v4 as uuidv4 } from 'uuid';
 import { validateEmail } from '../services/emailValidator';
 import logger from '../utils/logger';
 import mongoUtils from '../utils/mongodb';
 import { EmailJob, EmailJobStatus, EmailRequest } from '../models/email';
+import { withApiKeyAuth } from '../middleware/auth';
 
 const sqs = new SQS({});
 // Constrói a URL da fila a partir do nome e região
@@ -18,7 +19,8 @@ logger.info(`Construindo URL da fila SQS: ${EMAIL_QUEUE_URL}`);
 /**
  * Handler principal para os endpoints da API
  */
-export const handler: APIGatewayProxyHandler = async (event, context) => {
+// Handler interno sem autenticação
+const internalHandler = async (event: APIGatewayProxyEvent) => {
   try {
     logger.info({
       message: 'Requisição recebida',
@@ -49,7 +51,8 @@ export const handler: APIGatewayProxyHandler = async (event, context) => {
       statusCode: 404,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
       },
       body: JSON.stringify({
         success: false,
@@ -197,10 +200,11 @@ async function handleSendEmail(event: any) {
     }
     
     return {
-      statusCode: 202,
+      statusCode: 201,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
       },
       body: JSON.stringify({
         success: true,
@@ -263,22 +267,24 @@ async function handleValidateEmail(event: any) {
       })
     };
   } catch (error) {
-    logger.error(`Erro ao validar email: ${error.message}`);
-    
+    logger.error('Erro ao processar requisição', { error });
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
       },
       body: JSON.stringify({
-        success: false,
-        error: 'Erro ao validar email',
-        message: error.message
+        error: 'Erro interno do servidor',
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
       })
     };
   }
-}
+};
+
+// Exporta o handler com autenticação
+export const handler = withApiKeyAuth(internalHandler);
 
 /**
  * Obtém o status de um job
