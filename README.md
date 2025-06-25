@@ -1,54 +1,118 @@
-# SDsend - API Serverless de Email Descentralizada
+<div align="center">
+  <h1>🚀 SDsend - API de Email Descentralizada</h1>
+  <p>API escalável e segura para envio de emails com arquitetura serverless</p>
+  
+  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+  [![Serverless](https://img.shields.io/badge/Serverless-Framework-FD5750?logo=serverless&logoColor=white)](https://www.serverless.com/)
+  [![AWS](https://img.shields.io/badge/AWS-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+</div>
 
-Este projeto implementa uma API para envio de emails de forma descentralizada usando arquitetura serverless com AWS Lambda.
+## 📋 Visão Geral
 
-## Componentes Principais
+O SDsend é uma solução robusta para envio de emails em larga escala, projetada com arquitetura serverless para garantir alta disponibilidade e escalabilidade. A API oferece endpoints para envio de emails com suporte a templates, anexos e rastreamento de status.
 
-1. **API Gateway (AWS)**: Ponto de entrada único para o sistema
-2. **Lambda de Validação de Emails**: Valida sintaxe e registros DNS dos emails
-3. **Lambda de Envio de Emails**: Processa e envia emails via Amazon SES
-4. **SQS Queues**: Filas para processamento assíncrono e resiliência
-5. **DynamoDB**: Armazenamento de jobs e histórico de emails
+### ✨ Principais Recursos
 
-## Tecnologias Utilizadas
+- ✅ **Envio de emails** com suporte a HTML e texto simples
+- 🔄 **Processamento assíncrono** com filas SQS
+- 🔒 **Autenticação segura** via chave de API
+- 📊 **Rastreamento de status** em tempo real
+- 📦 **Suporte a anexos**
+- 🚀 **Alta disponibilidade** com arquitetura serverless
+- 🔍 **Logs detalhados** para monitoramento
 
-- Node.js com TypeScript
-- Serverless Framework
-- AWS Lambda, API Gateway, SQS, DynamoDB e SES
-- Nodemailer para envio de emails
+## 🛠 Tecnologias
 
-## Requisitos
+- **Backend**: Node.js com TypeScript
+- **Infraestrutura**: AWS (Lambda, API Gateway, SQS)
+- **Banco de Dados**: MongoDB Atlas
+- **Email**: Nodemailer com SMTP
+- **Autenticação**: API Key
+- **Monitoramento**: CloudWatch Logs
 
-- Node.js v16+
-- AWS CLI configurado com credenciais apropriadas
-- Serverless Framework CLI
+## 🚀 Como Começar
 
-## Configuração
+### Pré-requisitos
 
-### Instalação de dependências
+- Node.js 18+
+- npm ou yarn
+- Conta na AWS com permissões apropriadas
+- MongoDB Atlas (para produção) ou MongoDB local
+- Servidor SMTP para envio de emails
 
-```bash
-npm install
+### Instalação
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/seu-usuario/sd-email-api.git
+   cd sd-email-api
+   ```
+
+2. **Instale as dependências**
+   ```bash
+   npm install
+   # ou
+   yarn
+   ```
+
+3. **Configure as variáveis de ambiente**
+   - Copie o arquivo de exemplo de ambiente:
+     ```bash
+     cp env.example.yml env.dev.yml
+     ```
+   - Edite o arquivo `env.dev.yml` com suas configurações locais
+
+4. **Inicie o ambiente de desenvolvimento**
+   ```bash
+   npm run dev
+   ```
+
+## 📚 Documentação da API
+
+A documentação completa da API está disponível em [DOCS.md](./docs/DOCS.md).
+
+### Endpoints Principais
+
+- `POST /api/email/send` - Envia um novo email
+- `POST /api/email/validate-email` - Valida um endereço de email
+- `GET /api/email/status/:jobId` - Verifica o status de um job de email
+
+## 🔒 Autenticação
+
+Todas as requisições devem incluir o header de autorização:
+
+```
+Authorization: Bearer sua-chave-api
 ```
 
-### Variáveis de ambiente
+## 🌐 Ambientes
 
-Crie um arquivo `.env.local` para desenvolvimento local:
+- **Desenvolvimento**: `dev` - http://localhost:3000
+- **Homologação**: `staging` - https://stg-api.sdconsulta.com.br
+- **Produção**: `prod` - https://api.sdconsulta.com.br
 
-```
-STAGE=dev
-DEFAULT_FROM_EMAIL=seu-email@example.com
-```
+## 🤝 Contribuição
 
-## Executando o Projeto
+Contribuições são bem-vindas! Siga estes passos:
 
-### Desenvolvimento Local
+1. Faça um Fork do projeto
+2. Crie uma Branch para sua Feature (`git checkout -b feature/NovaFeature`)
+3. Adicione suas mudanças (`git add .`)
+4. Comite suas mudanças (`git commit -m 'Adiciona nova feature'`)
+5. Faça o Push da Branch (`git push origin feature/NovaFeature`)
+6. Abra um Pull Request
 
-```bash
-npm run dev
-```
+## 📄 Licença
 
-Isto inicia o Serverless Offline que emula AWS Lambda e API Gateway localmente.
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+## 📞 Suporte
+
+Para suporte, entre em contato:
+- Email: suporte@sdconsulta.com.br
+- Telefone: +55 (11) 99999-9999
 
 ### Deploy na AWS
 
