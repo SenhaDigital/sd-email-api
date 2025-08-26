@@ -53,16 +53,33 @@ functions:
   api:
     handler: src/handlers/api.handler
     events:
+      # Endpoints de envio de email
       - http:
           path: /api/email/send
           method: post
           cors: true
       - http:
+          path: /sdsend/email/send
+          method: post
+          cors: true
+          
+      # Endpoints de validação de email
+      - http:
           path: /api/email/validate-email
           method: post
           cors: true
       - http:
+          path: /sdsend/email/validate-email
+          method: post
+          cors: true
+          
+      # Endpoints de status
+      - http:
           path: /api/email/status/{jobId}
+          method: get
+          cors: true
+      - http:
+          path: /sdsend/email/status/{jobId}
           method: get
           cors: true
 

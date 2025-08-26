@@ -28,18 +28,21 @@ const internalHandler = async (event: APIGatewayProxyEvent) => {
       method: event.httpMethod
     });
 
+    // Normaliza o path removendo o prefixo /api ou /sdsend
+    const normalizedPath = event.path.replace(/^\/(api|sdsend)/, '');
+    
     // Endpoint de envio de email
-    if (event.path === '/api/email/send' && event.httpMethod === 'POST') {
+    if (normalizedPath === '/email/send' && event.httpMethod === 'POST') {
       return await handleSendEmail(event);
     }
     
     // Endpoint de validação de email
-    if (event.path === '/api/email/validate-email' && event.httpMethod === 'POST') {
+    if (normalizedPath === '/email/validate-email' && event.httpMethod === 'POST') {
       return await handleValidateEmail(event);
     }
     
     // Endpoint de status do job
-    if (event.path && event.path.startsWith('/api/email/status/') && event.httpMethod === 'GET') {
+    if (normalizedPath && normalizedPath.startsWith('/email/status/') && event.httpMethod === 'GET') {
       const jobId = event.pathParameters?.jobId;
       if (jobId) {
         return await handleGetJobStatus(jobId);
