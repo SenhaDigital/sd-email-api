@@ -31,7 +31,11 @@ provider:
   environment: ${file(env.${self:provider.stage}.yml)}
   # Aumentando o timeout para permitir o envio de emails (30 segundos)
   timeout: 30
-  
+
+package:
+  patterns:
+    - docs/openapi.yml
+
   iamRoleStatements:
     - Effect: Allow
       Action:
