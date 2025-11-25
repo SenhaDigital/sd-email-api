@@ -59,6 +59,14 @@ functions:
           method: post
           cors: true
       - http:
+          path: /api/email/swagger
+          method: get
+          cors: true
+      - http:
+          path: /api/email/swagger.yaml
+          method: get
+          cors: true
+      - http:
           path: /sdsend/email/send
           method: post
           cors: true

@@ -1,4 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { SQS } from '@aws-sdk/client-sqs';
 import { v4 as uuidv4 } from 'uuid';
 import { validateEmail } from '../services/emailValidator';
@@ -16,6 +18,49 @@ const EMAIL_QUEUE_URL = `https://sqs.${region}.amazonaws.com/${accountId}/${queu
 
 logger.info(`Construindo URL da fila SQS: ${EMAIL_QUEUE_URL}`);
 
+const swaggerYamlPath = join(process.cwd(), 'docs', 'openapi.yml');
+let cachedSwaggerSpec: string | null = null;
+
+const getSwaggerSpec = (): string => {
+  if (cachedSwaggerSpec) {
+    return cachedSwaggerSpec;
+  }
+
+  try {
+    cachedSwaggerSpec = readFileSync(swaggerYamlPath, 'utf-8');
+    return cachedSwaggerSpec;
+  } catch (error) {
+    logger.error('Erro ao carregar arquivo Swagger', { error: (error as Error).message });
+    throw error;
+  }
+};
+
+const swaggerHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SD Email API - Swagger</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <style>
+      body { margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        window.ui = SwaggerUIBundle({
+          url: './swagger.yaml',
+          dom_id: '#swagger-ui',
+          presets: [SwaggerUIBundle.presets.apis],
+          layout: 'BaseLayout'
+        });
+      });
+    </script>
+  </body>
+</html>`;
+
 /**
  * Handler principal para os endpoints da API
  */
@@ -30,7 +75,47 @@ const internalHandler = async (event: APIGatewayProxyEvent) => {
 
     // Normaliza o path removendo o prefixo /api ou /sdsend
     const normalizedPath = event.path.replace(/^\/(api|sdsend)/, '');
-    
+
+    // Documentação Swagger (UI)
+    if (normalizedPath === '/email/swagger' && event.httpMethod === 'GET') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: swaggerHtml
+      };
+    }
+
+    // Documento Swagger (YAML)
+    if (normalizedPath === '/email/swagger.yaml' && event.httpMethod === 'GET') {
+      try {
+        const swaggerSpec = getSwaggerSpec();
+        return {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'application/yaml; charset=utf-8',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: swaggerSpec
+        };
+      } catch (error) {
+        return {
+          statusCode: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          body: JSON.stringify({
+            success: false,
+            error: 'Erro ao carregar documentação',
+            message: error instanceof Error ? error.message : 'Erro desconhecido'
+          })
+        };
+      }
+    }
+
     // Endpoint de envio de email
     if (normalizedPath === '/email/send' && event.httpMethod === 'POST') {
       return await handleSendEmail(event);

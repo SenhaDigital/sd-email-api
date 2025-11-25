@@ -1,0 +1,380 @@
+openapi: 3.0.3
+info:
+  title: SD Email API
+  version: 1.0.0
+  description: |
+    API para envio, validação e consulta de status de emails da SD Consulta.
+    Todas as operações exigem autenticação via header **Authorization: Bearer** com a chave configurada em `API_SDSEND_KEY`.
+servers:
+  - url: https://api.sdconsulta.com.br
+security:
+  - BearerToken: []
+paths:
+  /api/email/send:
+    post:
+      summary: Enviar email
+      operationId: sendEmail
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+            examples:
+              exemplo:
+                value:
+                  to:
+                    - destinatario@exemplo.com
+                  subject: Assunto de teste
+                  body: Este é o corpo em texto simples.
+                  html: <p>Este é o corpo em <strong>HTML</strong>.</p>
+                  attachments:
+                    - filename: relatorio.pdf
+                      content: JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwvTGluZWFyaXplZCAxL0wgMTA4NzAvTyA2L0UgMTA1NDkvTiAxL1QgMTA4MDYvSCBbIDM5MyAxMTFdPj4KZW5kb2JqCg==
+                      contentType: application/pdf
+      responses:
+        '201':
+          description: Email aceito para processamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailAcceptedResponse'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                campos_obrigatorios:
+                  value:
+                    success: false
+                    error: "Campos obrigatórios: to, subject, e body ou html"
+        '401':
+          description: Autenticação necessária ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '500':
+          description: Erro interno ao processar o envio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/email/validate-email:
+    post:
+      summary: Validar endereço de email
+      operationId: validateEmail
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailValidationRequest'
+            examples:
+              exemplo:
+                value:
+                  email: usuario@exemplo.com
+      responses:
+        '200':
+          description: Resultado da validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailValidationResponse'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                campo_obrigatorio:
+                  value:
+                    success: false
+                    error: "Campo obrigatório: email"
+        '401':
+          description: Autenticação necessária ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '500':
+          description: Erro interno ao validar email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/email/status/{jobId}:
+    get:
+      summary: Consultar status de envio
+      operationId: getEmailStatus
+      security:
+        - BearerToken: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Identificador do job retornado pelo envio
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dados do job localizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '401':
+          description: Autenticação necessária ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '404':
+          description: Job não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                job_inexistente:
+                  value:
+                    success: false
+                    error: Job não encontrado
+        '500':
+          description: Erro interno ao recuperar o status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: >-
+        Informe o cabeçalho `Authorization: Bearer {API_SDSEND_KEY}`.
+  schemas:
+    SendEmailRequest:
+      type: object
+      description: Dados necessários para enfileirar um email.
+      required:
+        - to
+        - subject
+      properties:
+        to:
+          description: Destinatário(s) do email. Aceita string única ou array de emails.
+          oneOf:
+            - type: string
+              format: email
+            - type: array
+              items:
+                type: string
+                format: email
+              minItems: 1
+        subject:
+          type: string
+          description: Assunto do email.
+        body:
+          type: string
+          description: Conteúdo em texto simples.
+        html:
+          type: string
+          description: Conteúdo em HTML.
+        attachments:
+          type: array
+          description: Lista de anexos codificados em Base64.
+          items:
+            $ref: '#/components/schemas/EmailAttachment'
+      anyOf:
+        - required: [body]
+        - required: [html]
+      additionalProperties: false
+    EmailAttachment:
+      type: object
+      required:
+        - filename
+        - content
+      properties:
+        filename:
+          type: string
+          description: Nome do arquivo a ser exibido para o destinatário.
+        content:
+          type: string
+          format: byte
+          description: Conteúdo codificado em Base64.
+        contentType:
+          type: string
+          description: Tipo MIME do anexo (ex. application/pdf).
+    SendEmailAcceptedResponse:
+      type: object
+      required:
+        - success
+        - message
+        - jobId
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Email enviado para processamento
+        jobId:
+          type: string
+          format: uuid
+    EmailValidationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Endereço a ser validado.
+    EmailValidationResponse:
+      type: object
+      required:
+        - success
+        - email
+        - valid
+      properties:
+        success:
+          type: boolean
+          example: true
+        email:
+          type: string
+          format: email
+        valid:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+          description: Motivo informado quando a validação falha.
+    JobStatusResponse:
+      type: object
+      required:
+        - success
+        - job
+      properties:
+        success:
+          type: boolean
+          example: true
+        job:
+          $ref: '#/components/schemas/EmailJob'
+    EmailJob:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+        - attempts
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EmailJobStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        attempts:
+          type: integer
+          minimum: 0
+        validationResult:
+          $ref: '#/components/schemas/ValidationResult'
+        sendResult:
+          $ref: '#/components/schemas/SendResult'
+    EmailJobStatus:
+      type: string
+      enum:
+        - PENDING
+        - VALIDATING
+        - VALIDATION_FAILED
+        - VALIDATED
+        - SENDING
+        - SENT
+        - FAILED
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        reason:
+          type: string
+        validEmails:
+          type: array
+          items:
+            type: string
+            format: email
+        invalidEmails:
+          type: array
+          items:
+            type: object
+            required:
+              - email
+              - reason
+            properties:
+              email:
+                type: string
+                format: email
+              reason:
+                type: string
+    SendResult:
+      type: object
+      properties:
+        messageId:
+          type: string
+        accepted:
+          type: array
+          items:
+            type: string
+            format: email
+        rejected:
+          type: array
+          items:
+            type: string
+            format: email
+        pending:
+          type: array
+          items:
+            type: string
+            format: email
+        response:
+          type: string
+        error:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+    UnauthorizedResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Não autorizado
+        message:
+          type: string
+          example: Chave de API inválida ou não fornecida

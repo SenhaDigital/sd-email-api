@@ -5,9 +5,39 @@ type LambdaHandler = (event: APIGatewayProxyEvent) => Promise<APIGatewayProxyRes
 
 export const withApiKeyAuth = (handler: LambdaHandler) => {
   return async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    const requestPath = event.path || '';
+
+    if (requestPath.endsWith('/swagger') || requestPath.endsWith('/swagger.yaml')) {
+      return handler(event);
+    }
+
+    const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
+    const trimmedHeader = authHeader.trim();
+
+    if (!trimmedHeader) {
+      logger.warn('Tentativa de acesso sem cabeçalho Authorization', {
+        ip: event.requestContext.identity?.sourceIp,
+        path: event.path
+      });
+
+      return {
+        statusCode: 401,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Não autorizado',
+          message: 'Cabeçalho Authorization não fornecido'
+        })
+      };
+    }
+
+    // Compatibilidade: requisições assinadas com AWS Signature v4 já foram validadas pelo API Gateway
+    if (/^AWS4-HMAC-SHA256/i.test(trimmedHeader)) {
+      logger.debug('Requisição autenticada via AWS Signature v4');
+      return handler(event);
+    }
+
     const apiKey = process.env.API_SDSEND_KEY;
-    
-    // Se a chave de API não estiver configurada, retorna erro
+
     if (!apiKey) {
       logger.error('API_SDSEND_KEY não configurada no ambiente');
       return {
@@ -17,28 +47,40 @@ export const withApiKeyAuth = (handler: LambdaHandler) => {
       };
     }
 
-    // Obtém a chave do cabeçalho Authorization
-    const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
-    const token = authHeader.replace('Bearer ', '').trim();
-
-    // Verifica se a chave é válida
-    if (token !== apiKey) {
-      logger.warn('Tentativa de acesso não autorizado', { 
+    if (!trimmedHeader.startsWith('Bearer ')) {
+      logger.warn('Formato de Authorization não suportado', {
         ip: event.requestContext.identity?.sourceIp,
-        path: event.path 
+        path: event.path
       });
-      
+
       return {
         statusCode: 401,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           error: 'Não autorizado',
-          message: 'Chave de API inválida ou não fornecida'
+          message: 'Formato de Authorization inválido'
         })
       };
     }
 
-    // Se a autenticação for bem-sucedida, chama o handler original
+    const token = trimmedHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (token !== apiKey) {
+      logger.warn('Tentativa de acesso não autorizado', {
+        ip: event.requestContext.identity?.sourceIp,
+        path: event.path
+      });
+
+      return {
+        statusCode: 401,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Não autorizado',
+          message: 'Chave de API inválida'
+        })
+      };
+    }
+
     return handler(event);
   };
 };
