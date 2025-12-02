@@ -9,7 +9,7 @@ import { EmailJob, EmailJobStatus } from '../models/email';
  */
 export const handler: SQSHandler = async (event, context) => {
   try {
-    // Processa cada mensagem da fila
+    // Processa cada mensagem da filaa
     for (const record of event.Records) {
       const message = JSON.parse(record.body);
       const jobId = message.jobId;
