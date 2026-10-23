@@ -4,32 +4,25 @@ plugins:
   - serverless-offline
   - serverless-plugin-typescript
   - serverless-domain-manager
-  # serverless-dynamodb-local removido, pois MongoDB é usado agora
 
 custom:
-  # Carrega variáveis do arquivo de ambiente baseado no stage
   customDomain:
     domainName: ${self:provider.environment.DOMAIN_NAME}
     basePath: ''
     stage: ${self:provider.stage}
     createRoute53Record: true
-  # Nome dos recursos baseado no ambiente
-  # MongoDB config
   mongoCollection: ${self:provider.environment.EMAIL_COLLECTION}
   mongoDatabaseName: ${self:provider.environment.DATABASE_NAME}
-  # SQS queues
   emailQueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}
   sendEmailQueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}
 
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs20.x
   stage: ${opt:stage, 'dev'}
   region: ${self:provider.environment.REGION}
-  profile: ${self:provider.environment.PROFILE}
-  # Carrega variáveis de arquivo dependendo do stage
+  profile: ${env:AWS_PROFILE, self:provider.environment.PROFILE}
   environment: ${file(env.${self:provider.stage}.yml)}
-  # Aumentando o timeout para permitir o envio de emails (30 segundos)
   timeout: 30
   iamRoleStatements:
     - Effect: Allow
@@ -37,14 +30,13 @@ provider:
         - ses:SendEmail
         - ses:SendRawEmail
       Resource: "*"
-    # MongoDB é usado em vez de DynamoDB, sem necessidade de permissões IAM
     - Effect: Allow
       Action:
         - sqs:SendMessage
         - sqs:ReceiveMessage
         - sqs:DeleteMessage
         - sqs:GetQueueAttributes
-      Resource: 
+      Resource:
         - !GetAtt EmailQueue.Arn
         - !GetAtt SendEmailQueue.Arn
 
@@ -54,9 +46,8 @@ package:
 
 functions:
   api:
-    handler: src/handlers/api.handler
+    handler: src/funcoes/api.handler
     events:
-      # Endpoints de envio de email
       - http:
           path: /api/email/send
           method: post
@@ -73,8 +64,7 @@ functions:
           path: /sdsend/email/send
           method: post
           cors: true
-          
-      # Endpoints de validação de email
+
       - http:
           path: /api/email/validate-email
           method: post
@@ -83,8 +73,7 @@ functions:
           path: /sdsend/email/validate-email
           method: post
           cors: true
-          
-      # Endpoints de status
+
       - http:
           path: /api/email/status/{jobId}
           method: get
@@ -95,14 +84,14 @@ functions:
           cors: true
 
   processEmail:
-    handler: src/handlers/validator.handler
+    handler: src/funcoes/filaValidacao.handler
     events:
       - sqs:
           arn: !GetAtt EmailQueue.Arn
           batchSize: 1
 
   sendEmail:
-    handler: src/handlers/sender.handler
+    handler: src/funcoes/filaEnvio.handler
     events:
       - sqs:
           arn: !GetAtt SendEmailQueue.Arn
@@ -110,18 +99,35 @@ functions:
 
 resources:
   Resources:
-    # Removido EmailTable - MongoDB é usado em vez de DynamoDB
 
     EmailQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}
         VisibilityTimeout: 60
-        MessageRetentionPeriod: 1209600 # 14 days
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt EmailDeadLetterQueue.Arn
+          maxReceiveCount: 3
+
+    EmailDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}-dlq
+        MessageRetentionPeriod: 1209600
 
     SendEmailQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}
         VisibilityTimeout: 180
-        MessageRetentionPeriod: 1209600 # 14 days
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt SendEmailDeadLetterQueue.Arn
+          maxReceiveCount: 3
+
+    SendEmailDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}-dlq
+        MessageRetentionPeriod: 1209600

@@ -2,10 +2,8 @@
   "name": "sd-email-api",
   "version": "1.0.0",
   "description": "Serviço descentralizado de envio de emails",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:smtp": "node test-smtp.js",
+    "test": "vitest run",
     "dev": "serverless offline start --stage dev",
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
@@ -13,35 +11,33 @@
     "logs:validator": "serverless logs -f processEmail --tail",
     "logs:sender": "serverless logs -f sendEmail --tail",
     "remove": "serverless remove",
-    "build": "tsc"
+    "build": "tsc",
+    "predeploy:dev": "node scripts/checarNpm.js",
+    "predeploy:prod": "node scripts/checarNpm.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/aws-lambda": "^8.10.150",
-    "@types/minimatch": "^3.0.3",
     "@types/node": "^24.0.3",
     "@types/uuid": "^10.0.0",
-    "js-yaml": "^4.1.0",
-    "prisma": "^5.22.0",
     "serverless": "^3.38.0",
     "serverless-domain-manager": "^7.4.0",
     "serverless-offline": "^13.5.0",
-    "serverless-offline-sqs": "^8.0.0",
     "serverless-plugin-typescript": "^2.1.5",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.835.0",
-    "@types/express": "^5.0.3",
-    "axios": "^1.10.0",
     "email-validator": "^2.0.4",
-    "joi": "^17.9.2",
-    "mongodb": "^6.17.0",
     "mongoose": "^8.16.0",
     "nodemailer": "^6.9.3",
     "uuid": "^9.0.0",
     "winston": "^3.9.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

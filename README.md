@@ -1,183 +1,113 @@
-<div align="center">
-  <h1>🚀 SDsend - API de Email Descentralizada</h1>
-  <p>API escalável e segura para envio de emails com arquitetura serverless</p>
-  
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-  [![Serverless](https://img.shields.io/badge/Serverless-Framework-FD5750?logo=serverless&logoColor=white)](https://www.serverless.com/)
-  [![AWS](https://img.shields.io/badge/AWS-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
-  [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-</div>
+# sd-email-api
 
-## 📋 Visão Geral
+API de envio de emails da Senha Digital. Recebe o pedido por HTTP, grava um job no MongoDB e entrega o email via SMTP (Zoho).
 
-O SDsend é uma solução robusta para envio de emails em larga escala, projetada com arquitetura serverless para garantir alta disponibilidade e escalabilidade. A API oferece endpoints para envio de emails com suporte a templates, anexos e rastreamento de status.
-
-### ✨ Principais Recursos
-
-- ✅ **Envio de emails** com suporte a HTML e texto simples
-- 🔄 **Processamento assíncrono** com filas SQS
-- 🔒 **Autenticação segura** via chave de API
-- 📊 **Rastreamento de status** em tempo real
-- 📦 **Suporte a anexos**
-- 🚀 **Alta disponibilidade** com arquitetura serverless
-- 🔍 **Logs detalhados** para monitoramento
-
-## 🛠 Tecnologias
-
-- **Backend**: Node.js com TypeScript
-- **Infraestrutura**: AWS (Lambda, API Gateway, SQS)
-- **Banco de Dados**: MongoDB Atlas
-- **Email**: Nodemailer com SMTP
-- **Autenticação**: API Key
-- **Monitoramento**: CloudWatch Logs
-
-## 🚀 Como Começar
-
-### Pré-requisitos
-
-- Node.js 18+
-- npm ou yarn
-- Conta na AWS com permissões apropriadas
-- MongoDB Atlas (para produção) ou MongoDB local
-- Servidor SMTP para envio de emails
-
-### Instalação
-
-1. **Clone o repositório**
-   ```bash
-   git clone https://github.com/seu-usuario/sd-email-api.git
-   cd sd-email-api
-   ```
-
-2. **Instale as dependências**
-   ```bash
-   npm install
-   # ou
-   yarn
-   ```
-
-3. **Configure as variáveis de ambiente**
-   - Copie o arquivo de exemplo de ambiente:
-     ```bash
-     cp env.example.yml env.dev.yml
-     ```
-   - Edite o arquivo `env.dev.yml` com suas configurações locais
-
-4. **Inicie o ambiente de desenvolvimento**
-   ```bash
-   npm run dev
-   ```
-
-## 📚 Documentação da API
-
-A documentação completa da API está disponível em [DOCS.md](./docs/DOCS.md).
-
-### Endpoints Principais
-
-- `POST /api/email/send` - Envia um novo email
-- `POST /api/email/validate-email` - Valida um endereço de email
-- `GET /api/email/status/:jobId` - Verifica o status de um job de email
-
-## 🔒 Autenticação
-
-Todas as requisições devem incluir o header de autorização:
+## Como funciona
 
 ```
-Authorization: Bearer sua-chave-api
+cliente --POST /send--> api --grava job--> MongoDB
+                         |
+                         +--> fila de validação --> processEmail --> fila de envio --> sendEmail --> SMTP
 ```
 
-## 🌐 Ambientes
+- `api` responde `201` com o `jobId` assim que grava o job. O envio acontece depois.
+- `processEmail` valida os destinatários (sintaxe, domínio descartável e registro MX) e descarta os inválidos.
+- `sendEmail` envia pelo SMTP e grava o resultado no job. Se o SMTP falhar, a fila tenta de novo; depois de 3 tentativas a mensagem vai para a fila de erro (`<fila>-dlq`), onde fica por 14 dias.
+- Com `ENVIO_DIRETO=true` o envio é feito direto pela `api`, sem fila, sem validação de destinatário e sem retentativa. Hoje está ligado no `env.dev.yml` porque a api-sdgs-agenda usa a URL de dev.
 
-- **Desenvolvimento**: `dev` - http://localhost:3000
-- **Homologação**: `staging` - https://stg-api.sdconsulta.com.br
-- **Produção**: `prod` - https://api.sdconsulta.com.br
+## Ambientes
 
-## 🤝 Contribuição
+| Stage | Conta AWS | Região | URL base |
+|---|---|---|---|
+| dev | 874224893857 | us-east-2 | `https://dev-api.sdconsulta.com.br/api/email` |
+| prod | 493765722411 | sa-east-1 | `https://api.sdconsulta.com.br/api/email` |
 
-Contribuições são bem-vindas! Siga estes passos:
+As rotas também respondem com o prefixo `/sdsend/email` no lugar de `/api/email`.
 
-1. Faça um Fork do projeto
-2. Crie uma Branch para sua Feature (`git checkout -b feature/NovaFeature`)
-3. Adicione suas mudanças (`git add .`)
-4. Comite suas mudanças (`git commit -m 'Adiciona nova feature'`)
-5. Faça o Push da Branch (`git push origin feature/NovaFeature`)
-6. Abra um Pull Request
+## Contrato da API
 
-## 📄 Licença
+Todas as rotas, exceto a documentação, exigem `Authorization: Bearer <chave>`. São aceitas a chave de `API_SDSEND_KEY` e as chaves listadas em `API_SDSEND_KEYS`, separadas por vírgula, o que permite dar uma chave própria para cada sistema.
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+### `POST /send`
 
-## 📞 Suporte
-
-Para suporte, entre em contato:
-- Email: suporte@sdconsulta.com.br
-- Telefone: +55 (11) 99999-9999
-
-### Deploy na AWS
-
-```bash
-npx serverless deploy --stage dev
-```
-
-Ou para ambiente de produção:
-
-```bash
-npx serverless deploy --stage prod
-```
-
-## Endpoints da API
-
-### Enviar Email
-```
-POST /api/email/send
-```
-Payload:
 ```json
 {
-  "to": "destinatario@example.com",
-  "subject": "Assunto do Email",
-  "body": "Conteúdo do email em texto",
-  "html": "<p>Conteúdo do email em HTML</p>",
-  "from": "remetente@example.com",
+  "to": "destinatario@exemplo.com",
+  "subject": "Assunto",
+  "html": "<p>Conteúdo</p>",
+  "body": "Conteúdo em texto",
+  "fromName": "Nome exibido como remetente",
   "attachments": [
-    {
-      "filename": "arquivo.pdf",
-      "content": "base64..."
-    }
+    { "filename": "arquivo.pdf", "content": "<base64>", "contentType": "application/pdf" }
   ]
 }
 ```
 
-### Verificar Status de Envio
+- Obrigatórios: `to`, `subject` e pelo menos um entre `body` e `html`.
+- `to` aceita um email, uma lista ou emails separados por vírgula.
+- O endereço do remetente é sempre o configurado em `DEFAULT_FROM_EMAIL`. Um `from` enviado pelo cliente é ignorado.
+- O nome exibido é o `fromName` enviado (até 100 caracteres, sem quebras de linha). Sem `fromName`, usa `DEFAULT_FROM_NAME` ou, se não estiver definido, "SD Consulta".
+
+Respostas:
+
+| Status | Corpo |
+|---|---|
+| 201 | `{ "success": true, "message": "Email enviado para processamento", "jobId": "..." }` |
+| 400 | `{ "success": false, "error": "Campos obrigatórios: to, subject, e body ou html" }` |
+| 401 | `{ "error": "Não autorizado", "message": "..." }` |
+
+### `GET /status/{jobId}`
+
+Retorna `{ "success": true, "job": { "id", "status", "createdAt", "updatedAt", "attempts", "validationResult", "sendResult" } }` ou `404` se o job não existir. `validationResult` e `sendResult` aparecem quando a etapa já aconteceu, e `attempts` conta as tentativas de envio.
+
+Status possíveis: `PENDING`, `VALIDATING`, `VALIDATION_FAILED`, `VALIDATED`, `SENDING`, `SENT`, `FAILED`.
+
+### `POST /validate-email`
+
+Recebe `{ "email": "..." }` e retorna `{ "success": true, "email": "...", "valid": true|false, "reason"?: "..." }`.
+
+### Documentação
+
+- `GET /swagger`: interface do Swagger
+- `GET /swagger.yaml`: especificação em [`docs/openapi.yml`](docs/openapi.yml)
+
+## Estrutura
+
 ```
-GET /api/email/status/:jobId
+src/
+  funcoes/        entradas das Lambdas: api, filaValidacao e filaEnvio
+  rotas/          uma rota HTTP por arquivo
+  seguranca/      autenticação por chave de API
+  servicos/       envio SMTP, validação de email e filas SQS
+  repositorios/   acesso ao MongoDB
+  config/         leitura das variáveis de ambiente
+  tipos/          tipos compartilhados
+  utilitarios/    logger e montagem das respostas HTTP
+testes/
+  contrato/       garantem que o contrato da API e das filas não muda
+  apoio/          mocks de MongoDB, SQS, SMTP e DNS
+  unitarios/      testes de funções isoladas
 ```
 
-### Validar Email
+Os nomes das funções no `serverless.yml` (`api`, `processEmail` e `sendEmail`) não devem ser alterados: eles definem os nomes das Lambdas e das filas já em uso.
+
+## Desenvolvimento
+
+Requer Node 20 ou superior.
+
+```bash
+npm install
+npm test
+npx tsc --noEmit -p .
 ```
-POST /api/email/validate-email
+
+## Deploy
+
+```bash
+AWS_PROFILE=DEV_SD npm run deploy:dev
+AWS_PROFILE=PROD_SD_2 npm run deploy:prod
 ```
-Payload:
-```json
-{
-  "email": "email@example.com"
-}
-```
 
-## Escalabilidade
+O deploy precisa do Node 20 com npm 10 (`.nvmrc`). Com npm mais novo o Serverless gera o pacote sem as dependências, e o script de deploy se recusa a rodar.
 
-O sistema serverless escala automaticamente com a carga:
-
-1. **Lambda**: Escala automaticamente com o número de requisições
-2. **SQS**: Gerencia filas de trabalho com retry automático
-3. **DynamoDB**: Banco de dados NoSQL altamente escalável
-4. **SES**: Serviço de email gerenciado com alta entregabilidade
-
-## Descentralização
-
-A arquitetura serverless permite descentralização natural:
-
-1. **Multi-região**: Deploy em várias regiões AWS para resiliência global
-2. **Failover automático**: As funções Lambda podem ser redirecionadas entre regiões
-3. **Processamento distribuído**: Cada solicitação é processada independentemente
+As variáveis de cada stage vêm de `env.<stage>.yml`.
