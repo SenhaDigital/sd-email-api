@@ -6,7 +6,7 @@ export const ambiente = {
     return process.env.ENVIRONMENT;
   },
   get envioDireto() {
-    return process.env.IS_OFFLINE === 'true' || process.env.IS_LOCAL === 'true' || process.env.STAGE === 'dev';
+    return process.env.IS_OFFLINE === 'true' || process.env.IS_LOCAL === 'true' || process.env.ENVIO_DIRETO === 'true';
   },
   get chavesApi() {
     return [process.env.API_SDSEND_KEY, ...(process.env.API_SDSEND_KEYS || '').split(',')]

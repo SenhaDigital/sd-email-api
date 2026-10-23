@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CHAVE_API, carregarFuncao, estado, eventoHttp, limparEstado } from '../apoio/ambiente';
 
@@ -100,8 +102,23 @@ describe('POST /email/send', () => {
     expect(estado.documentos[0].errorMessage).toBe('Falha ao processar o envio: sqs indisponível');
   });
 
-  it('em dev envia direto sem passar pela fila', async () => {
+  it('com STAGE dev e sem ENVIO_DIRETO usa a fila', async () => {
     process.env.STAGE = 'dev';
+    await api(
+      eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
+    );
+
+    expect(estado.mensagensFila).toHaveLength(1);
+    expect(estado.emailsEnviados).toHaveLength(0);
+  });
+
+  it('o env.dev.yml mantém o envio direto ligado', () => {
+    const envDev = readFileSync(join(__dirname, '..', '..', 'env.dev.yml'), 'utf-8');
+    expect(envDev).toMatch(/^ENVIO_DIRETO: "true"$/m);
+  });
+
+  it('em dev envia direto sem passar pela fila', async () => {
+    process.env.ENVIO_DIRETO = 'true';
     const resposta = await api(
       eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
     );
@@ -114,7 +131,7 @@ describe('POST /email/send', () => {
   });
 
   it('a consulta de status traz o resultado do envio', async () => {
-    process.env.STAGE = 'dev';
+    process.env.ENVIO_DIRETO = 'true';
     const envio = await api(
       eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
     );
@@ -132,7 +149,7 @@ describe('POST /email/send', () => {
   });
 
   it('em dev responde 201 mesmo quando o SMTP falha', async () => {
-    process.env.STAGE = 'dev';
+    process.env.ENVIO_DIRETO = 'true';
     estado.falharEnvio = true;
     const resposta = await api(
       eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
@@ -143,7 +160,7 @@ describe('POST /email/send', () => {
   });
 
   const enviarDev = (corpo: any) => {
-    process.env.STAGE = 'dev';
+    process.env.ENVIO_DIRETO = 'true';
     return api(eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo, autorizacao: BEARER }));
   };
 
@@ -189,7 +206,7 @@ describe('POST /email/send', () => {
   });
 
   it('ignora o remetente enviado pelo cliente', async () => {
-    process.env.STAGE = 'dev';
+    process.env.ENVIO_DIRETO = 'true';
     await api(
       eventoHttp({
         metodo: 'POST',

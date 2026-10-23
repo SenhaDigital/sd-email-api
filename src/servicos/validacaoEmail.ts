@@ -4,7 +4,24 @@ import { promisify } from 'util';
 import logger from '../utilitarios/logger';
 import { ResultadoValidacao } from '../tipos/email';
 
-const resolverMx = promisify(dns.resolveMx);
+const resolverMxUmaVez = promisify(dns.resolveMx);
+
+const ERROS_DNS_TRANSITORIOS = ['ETIMEOUT', 'ESERVFAIL', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN'];
+const TENTATIVAS_DNS = 3;
+
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function resolverMx(dominio: string) {
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      return await resolverMxUmaVez(dominio);
+    } catch (error) {
+      if (tentativa >= TENTATIVAS_DNS || !ERROS_DNS_TRANSITORIOS.includes(error.code)) throw error;
+      logger.warn(`Falha temporária de DNS para ${dominio} (tentativa ${tentativa}): ${error.code}`);
+      await esperar(100 * tentativa);
+    }
+  }
+}
 
 const dominiosDescartaveis = [
   'tempmail.com',

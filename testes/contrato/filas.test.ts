@@ -50,6 +50,24 @@ describe('fila de validação', () => {
     expect(estado.mensagensFila).toHaveLength(0);
   });
 
+  it('tenta de novo quando o DNS falha temporariamente', async () => {
+    estado.falhasDns = 2;
+    estado.documentos.push(job('j7', 'a@instavel.com.br'));
+
+    await validacao(eventoFila('j7'), {} as any, () => undefined);
+
+    expect(estado.documentos[0].status).toBe('VALIDATED');
+  });
+
+  it('recusa quando o DNS continua falhando', async () => {
+    estado.falhasDns = 5;
+    estado.documentos.push(job('j8', 'a@instavel.com.br'));
+
+    await validacao(eventoFila('j8'), {} as any, () => undefined);
+
+    expect(estado.documentos[0].status).toBe('VALIDATION_FAILED');
+  });
+
   it('ignora job inexistente', async () => {
     await validacao(eventoFila('nao-existe'), {} as any, () => undefined);
     expect(estado.mensagensFila).toHaveLength(0);

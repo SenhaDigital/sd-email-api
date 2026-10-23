@@ -13,7 +13,7 @@ cliente --POST /send--> api --grava job--> MongoDB
 - `api` responde `201` com o `jobId` assim que grava o job. O envio acontece depois.
 - `processEmail` valida os destinatários (sintaxe, domínio descartável e registro MX) e descarta os inválidos.
 - `sendEmail` envia pelo SMTP e grava o resultado no job. Se o SMTP falhar, a fila tenta de novo; depois de 3 tentativas a mensagem vai para a fila de erro (`<fila>-dlq`), onde fica por 14 dias.
-- No stage `dev` o envio é feito direto pela `api`, sem passar pelas filas.
+- Com `ENVIO_DIRETO=true` o envio é feito direto pela `api`, sem fila, sem validação de destinatário e sem retentativa. Hoje está ligado no `env.dev.yml` porque a api-sdgs-agenda usa a URL de dev.
 
 ## Ambientes
 

@@ -19,7 +19,8 @@ export const estado = {
   mensagensFila: [] as any[],
   emailsEnviados: [] as any[],
   falharEnvio: false,
-  falhasFila: 0
+  falhasFila: 0,
+  falhasDns: 0
 };
 
 vi.mock('mongoose', () => {
@@ -120,7 +121,11 @@ vi.mock('nodemailer', () => {
 vi.mock('dns', () => {
   const dns = {
     resolveMx: (dominio: string, retorno: Function) => {
-      if (dominio === 'semmx.com.br') return retorno(new Error('ENOTFOUND'));
+      if (dominio === 'semmx.com.br') return retorno(Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' }));
+      if (dominio === 'instavel.com.br' && estado.falhasDns > 0) {
+        estado.falhasDns--;
+        return retorno(Object.assign(new Error('ETIMEOUT'), { code: 'ETIMEOUT' }));
+      }
       retorno(null, [{ exchange: `mx.${dominio}`, priority: 10 }]);
     }
   };
@@ -133,6 +138,8 @@ export function limparEstado() {
   estado.emailsEnviados.length = 0;
   estado.falharEnvio = false;
   estado.falhasFila = 0;
+  estado.falhasDns = 0;
+  delete process.env.ENVIO_DIRETO;
 }
 
 export async function carregarFuncao(nome: string) {
