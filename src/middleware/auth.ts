@@ -30,9 +30,12 @@ export const withApiKeyAuth = (handler: LambdaHandler) => {
       };
     }
 
-    // Compatibilidade: requisições assinadas com AWS Signature v4 já foram validadas pelo API Gateway
     if (/^AWS4-HMAC-SHA256/i.test(trimmedHeader)) {
-      logger.debug('Requisição autenticada via AWS Signature v4');
+      logger.warn('Requisição aceita via cabeçalho AWS Signature v4', {
+        ip: event.requestContext.identity?.sourceIp,
+        userAgent: event.requestContext.identity?.userAgent,
+        path: event.path
+      });
       return handler(event);
     }
 
