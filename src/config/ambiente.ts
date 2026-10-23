@@ -8,8 +8,10 @@ export const ambiente = {
   get envioDireto() {
     return process.env.IS_OFFLINE === 'true' || process.env.IS_LOCAL === 'true' || process.env.STAGE === 'dev';
   },
-  get chaveApi() {
-    return process.env.API_SDSEND_KEY;
+  get chavesApi() {
+    return [process.env.API_SDSEND_KEY, ...(process.env.API_SDSEND_KEYS || '').split(',')]
+      .map((chave) => (chave || '').trim())
+      .filter(Boolean);
   },
   get regiao() {
     return process.env.REGION || 'sa-east-1';

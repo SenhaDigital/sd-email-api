@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'crypto';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import logger from '../utilitarios/logger';
 import { ambiente } from '../config/ambiente';
@@ -10,6 +11,15 @@ function origem(event: APIGatewayProxyEvent) {
     ip: event.requestContext.identity?.sourceIp,
     path: event.path
   };
+}
+
+function resumo(valor: string) {
+  return createHash('sha256').update(valor).digest();
+}
+
+function chaveValida(token: string, chaves: string[]) {
+  const recebida = resumo(token);
+  return chaves.some((chave) => timingSafeEqual(recebida, resumo(chave)));
 }
 
 function naoAutorizado(mensagem: string) {
@@ -40,9 +50,9 @@ export const comAutenticacao = (funcao: FuncaoHttp): FuncaoHttp => {
       return funcao(event);
     }
 
-    const chaveApi = ambiente.chaveApi;
+    const chavesApi = ambiente.chavesApi;
 
-    if (!chaveApi) {
+    if (chavesApi.length === 0) {
       logger.error('API_SDSEND_KEY não configurada no ambiente');
       return respostaNaoAutorizada(500, { error: 'Erro de configuração do servidor' });
     }
@@ -54,7 +64,7 @@ export const comAutenticacao = (funcao: FuncaoHttp): FuncaoHttp => {
 
     const token = cabecalho.replace(/^Bearer\s+/i, '').trim();
 
-    if (token !== chaveApi) {
+    if (!chaveValida(token, chavesApi)) {
       logger.warn('Tentativa de acesso não autorizado', origem(event));
       return naoAutorizado('Chave de API inválida');
     }

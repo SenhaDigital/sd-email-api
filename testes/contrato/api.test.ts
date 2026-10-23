@@ -241,6 +241,30 @@ describe('autenticação', () => {
     expect(resposta.statusCode).toBe(201);
   });
 
+  it('aceita chaves adicionais de API_SDSEND_KEYS sem invalidar a principal', async () => {
+    process.env.API_SDSEND_KEYS = 'chave-loja, chave-crm';
+    try {
+      expect((await envio('Bearer chave-crm')).statusCode).toBe(201);
+      expect((await envio('Bearer chave-loja')).statusCode).toBe(201);
+      expect((await envio(BEARER)).statusCode).toBe(201);
+      expect((await envio('Bearer chave-')).statusCode).toBe(401);
+    } finally {
+      delete process.env.API_SDSEND_KEYS;
+    }
+  });
+
+  it('responde 500 quando nenhuma chave está configurada', async () => {
+    const chave = process.env.API_SDSEND_KEY;
+    delete process.env.API_SDSEND_KEY;
+    try {
+      const resposta = await envio(BEARER);
+      expect(resposta.statusCode).toBe(500);
+      expect(JSON.parse(resposta.body)).toEqual({ error: 'Erro de configuração do servidor' });
+    } finally {
+      process.env.API_SDSEND_KEY = chave;
+    }
+  });
+
   it('libera o Swagger sem autenticação', async () => {
     const ui = await api(eventoHttp({ metodo: 'GET', caminho: '/api/email/swagger' }));
     const yaml = await api(eventoHttp({ metodo: 'GET', caminho: '/api/email/swagger.yaml' }));
