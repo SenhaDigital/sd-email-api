@@ -12,7 +12,7 @@ cliente --POST /send--> api --grava job--> MongoDB
 
 - `api` responde `201` com o `jobId` assim que grava o job. O envio acontece depois.
 - `processEmail` valida os destinatários (sintaxe, domínio descartável e registro MX) e descarta os inválidos.
-- `sendEmail` envia pelo SMTP e grava o resultado no job.
+- `sendEmail` envia pelo SMTP e grava o resultado no job. Se o SMTP falhar, a fila tenta de novo; depois de 3 tentativas a mensagem vai para a fila de erro (`<fila>-dlq`), onde fica por 14 dias.
 - No stage `dev` o envio é feito direto pela `api`, sem passar pelas filas.
 
 ## Ambientes
@@ -26,7 +26,7 @@ As rotas também respondem com o prefixo `/sdsend/email` no lugar de `/api/email
 
 ## Contrato da API
 
-Todas as rotas, exceto a documentação, exigem `Authorization: Bearer <chave>`.
+Todas as rotas, exceto a documentação, exigem `Authorization: Bearer <chave>`. São aceitas a chave de `API_SDSEND_KEY` e as chaves listadas em `API_SDSEND_KEYS`, separadas por vírgula, o que permite dar uma chave própria para cada sistema.
 
 ### `POST /send`
 
@@ -56,7 +56,7 @@ Respostas:
 
 ### `GET /status/{jobId}`
 
-Retorna `{ "success": true, "job": { "id", "status", "createdAt", "updatedAt", "attempts" } }` ou `404` se o job não existir.
+Retorna `{ "success": true, "job": { "id", "status", "createdAt", "updatedAt", "attempts", "validationResult", "sendResult" } }` ou `404` se o job não existir. `validationResult` e `sendResult` aparecem quando a etapa já aconteceu, e `attempts` conta as tentativas de envio.
 
 Status possíveis: `PENDING`, `VALIDATING`, `VALIDATION_FAILED`, `VALIDATED`, `SENDING`, `SENT`, `FAILED`.
 
@@ -84,11 +84,14 @@ src/
 testes/
   contrato/       garantem que o contrato da API e das filas não muda
   apoio/          mocks de MongoDB, SQS, SMTP e DNS
+  unitarios/      testes de funções isoladas
 ```
 
 Os nomes das funções no `serverless.yml` (`api`, `processEmail` e `sendEmail`) não devem ser alterados: eles definem os nomes das Lambdas e das filas já em uso.
 
 ## Desenvolvimento
+
+Requer Node 20 ou superior.
 
 ```bash
 npm install
