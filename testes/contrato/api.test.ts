@@ -116,6 +116,21 @@ describe('POST /email/send', () => {
     });
   });
 
+  it('ignora o remetente enviado pelo cliente', async () => {
+    process.env.STAGE = 'dev';
+    await api(
+      eventoHttp({
+        metodo: 'POST',
+        caminho: '/api/email/send',
+        corpo: { ...payloadsDosClientes.SDCRM, from: 'falso@outrodominio.com' },
+        autorizacao: BEARER
+      })
+    );
+
+    expect(estado.emailsEnviados[0].from.address).toBe('no.reply@senhadigital.com.br');
+    expect(estado.documentos[0].emailRequest.from).toBeUndefined();
+  });
+
   it('responde 400 sem os campos obrigatórios', async () => {
     const resposta = await api(
       eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: { to: 'a@b.com' }, autorizacao: BEARER })

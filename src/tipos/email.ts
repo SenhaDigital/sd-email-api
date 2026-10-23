@@ -9,7 +9,6 @@ export interface SolicitacaoEmail {
   subject: string;
   body?: string;
   html?: string;
-  from?: string;
   fromName?: string;
   attachments?: AnexoEmail[];
 }
