@@ -20,7 +20,7 @@ async function processarSemFila(jobId: string, solicitacao: SolicitacaoEmail) {
     updatedAt: new Date()
   });
 
-  await jobsEmail.atualizar(jobId, {
+  await jobsEmail.registrarTentativa(jobId, {
     status: StatusJobEmail.ENVIANDO,
     updatedAt: new Date()
   });

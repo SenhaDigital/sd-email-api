@@ -30,6 +30,8 @@ describe('fila de validação', () => {
 
     const doc = estado.documentos[0];
     expect(doc.status).toBe('VALIDATED');
+    expect(doc.attempts).toBe(0);
+    expect(doc.validationResult.validEmails).toEqual(['a@senhadigital.com.br']);
     expect(doc.emailRequest.to).toBe('a@senhadigital.com.br');
     expect(estado.mensagensFila).toHaveLength(1);
     expect(estado.mensagensFila[0].QueueUrl).toBe('https://sqs.sa-east-1.amazonaws.com/000000000000/fila-envio');
@@ -63,6 +65,7 @@ describe('fila de envio', () => {
     expect(estado.emailsEnviados[0].from.name).toBe('Agendamento Senha Digital');
     expect(estado.documentos[0].status).toBe('SENT');
     expect(estado.documentos[0].sendResult.messageId).toBe('mensagem-1');
+    expect(estado.documentos[0].attempts).toBe(1);
   });
 
   it('marca FAILED quando o SMTP falha', async () => {

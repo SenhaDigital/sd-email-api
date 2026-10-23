@@ -13,7 +13,7 @@ const esquemaJobEmail = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   status: { type: String, required: true },
   emailRequest: {
-    to: { type: [String], required: true },
+    to: { type: mongoose.Schema.Types.Mixed, required: true },
     subject: { type: String, required: true },
     body: String,
     html: String,
@@ -23,6 +23,8 @@ const esquemaJobEmail = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  validationResult: mongoose.Schema.Types.Mixed,
+  sendResult: mongoose.Schema.Types.Mixed,
   sentAt: Date,
   errorMessage: String,
   attempts: { type: Number, default: 0 }
@@ -48,6 +50,13 @@ export const jobsEmail = {
   },
 
   async atualizar(id: string, dados: any): Promise<void> {
+    await ModeloJobEmail.updateOne(
+      { id },
+      { $set: { ...dados, updatedAt: new Date() } }
+    );
+  },
+
+  async registrarTentativa(id: string, dados: any): Promise<void> {
     await ModeloJobEmail.updateOne(
       { id },
       {

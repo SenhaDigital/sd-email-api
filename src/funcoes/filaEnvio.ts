@@ -20,10 +20,9 @@ async function enviarJob(jobId: string) {
       return;
     }
 
-    await jobsEmail.atualizar(jobId, {
+    await jobsEmail.registrarTentativa(jobId, {
       status: StatusJobEmail.ENVIANDO,
-      updatedAt: new Date(),
-      $inc: { attempts: 1 }
+      updatedAt: new Date()
     });
 
     const resultado = await enviarEmail(job.emailRequest);

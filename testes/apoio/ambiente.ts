@@ -58,6 +58,7 @@ vi.mock('mongoose', () => {
   };
 
   class Schema {
+    static Types = { Mixed: 'Mixed' };
     constructor(public definicao: any) {}
   }
 

@@ -86,6 +86,25 @@ describe('POST /email/send', () => {
     expect(estado.mensagensFila).toHaveLength(0);
     expect(estado.emailsEnviados).toHaveLength(1);
     expect(estado.documentos[0].status).toBe('SENT');
+    expect(estado.documentos[0].attempts).toBe(1);
+  });
+
+  it('a consulta de status traz o resultado do envio', async () => {
+    process.env.STAGE = 'dev';
+    const envio = await api(
+      eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
+    );
+    const { jobId } = JSON.parse(envio.body);
+
+    const resposta = await api(
+      eventoHttp({ metodo: 'GET', caminho: `/api/email/status/${jobId}`, autorizacao: BEARER, jobId })
+    );
+
+    expect(JSON.parse(resposta.body).job).toMatchObject({
+      status: 'SENT',
+      attempts: 1,
+      sendResult: { messageId: 'mensagem-1' }
+    });
   });
 
   it('em dev responde 201 mesmo quando o SMTP falha', async () => {
