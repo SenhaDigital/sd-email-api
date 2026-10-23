@@ -7,6 +7,8 @@ import { JobEmail, StatusJobEmail } from '../tipos/email';
 async function enviarJob(jobId: string) {
   logger.info(`Processando job de envio de email: ${jobId}`);
 
+  let falhaSmtp: string | undefined;
+
   try {
     const job = await jobsEmail.buscar(jobId) as JobEmail;
 
@@ -36,6 +38,10 @@ async function enviarJob(jobId: string) {
     });
 
     logger.info(`Processamento concluído para o job ${jobId} com status ${statusFinal}`);
+
+    if (resultado.error) {
+      falhaSmtp = resultado.error;
+    }
   } catch (error) {
     logger.error(`Erro ao processar job de envio ${jobId}: ${error.message}`);
 
@@ -47,6 +53,10 @@ async function enviarJob(jobId: string) {
     } catch (erroBanco) {
       logger.error(`Erro ao atualizar status do job ${jobId}: ${erroBanco.message}`);
     }
+  }
+
+  if (falhaSmtp) {
+    throw new Error(`Falha no envio SMTP do job ${jobId}: ${falhaSmtp}`);
   }
 }
 

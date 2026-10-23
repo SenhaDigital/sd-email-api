@@ -68,14 +68,28 @@ describe('fila de envio', () => {
     expect(estado.documentos[0].attempts).toBe(1);
   });
 
-  it('marca FAILED quando o SMTP falha', async () => {
+  it('marca FAILED e devolve erro para a fila tentar de novo quando o SMTP falha', async () => {
     estado.falharEnvio = true;
     estado.documentos.push(job('j4', 'a@senhadigital.com.br', 'VALIDATED'));
 
-    await envio(eventoFila('j4'), {} as any, () => undefined);
+    await expect(envio(eventoFila('j4'), {} as any, () => undefined)).rejects.toThrow('falha smtp');
 
     expect(estado.documentos[0].status).toBe('FAILED');
     expect(estado.documentos[0].sendResult.error).toBe('falha smtp');
+    expect(estado.documentos[0].attempts).toBe(1);
+  });
+
+  it('envia na nova tentativa depois de uma falha', async () => {
+    estado.falharEnvio = true;
+    estado.documentos.push(job('j6', 'a@senhadigital.com.br', 'VALIDATED'));
+    await expect(envio(eventoFila('j6'), {} as any, () => undefined)).rejects.toThrow();
+
+    estado.falharEnvio = false;
+    await envio(eventoFila('j6'), {} as any, () => undefined);
+
+    expect(estado.emailsEnviados).toHaveLength(1);
+    expect(estado.documentos[0].status).toBe('SENT');
+    expect(estado.documentos[0].attempts).toBe(2);
   });
 
   it('não reenvia job já enviado', async () => {

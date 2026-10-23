@@ -106,10 +106,28 @@ resources:
         QueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}
         VisibilityTimeout: 60
         MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt EmailDeadLetterQueue.Arn
+          maxReceiveCount: 3
+
+    EmailDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.EMAIL_QUEUE_NAME}-dlq
+        MessageRetentionPeriod: 1209600
 
     SendEmailQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}
         VisibilityTimeout: 180
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt SendEmailDeadLetterQueue.Arn
+          maxReceiveCount: 3
+
+    SendEmailDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.SEND_EMAIL_QUEUE_NAME}-dlq
         MessageRetentionPeriod: 1209600
