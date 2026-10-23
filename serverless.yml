@@ -26,7 +26,7 @@ provider:
   runtime: nodejs18.x
   stage: ${opt:stage, 'dev'}
   region: ${self:provider.environment.REGION}
-  profile: ${self:provider.environment.PROFILE}
+  profile: ${env:AWS_PROFILE, self:provider.environment.PROFILE}
   # Carrega variáveis de arquivo dependendo do stage
   environment: ${file(env.${self:provider.stage}.yml)}
   # Aumentando o timeout para permitir o envio de emails (30 segundos)
