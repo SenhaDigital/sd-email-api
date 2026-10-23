@@ -76,6 +76,30 @@ describe('POST /email/send', () => {
     expect(estado.emailsEnviados).toHaveLength(0);
   });
 
+  it('tenta publicar de novo quando a fila falha', async () => {
+    estado.falhasFila = 2;
+    const resposta = await api(
+      eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
+    );
+
+    expect(resposta.statusCode).toBe(201);
+    expect(estado.mensagensFila).toHaveLength(1);
+    expect(estado.documentos[0].status).toBe('PENDING');
+  });
+
+  it('responde 201 e marca FAILED quando a fila falha em todas as tentativas', async () => {
+    estado.falhasFila = 5;
+    const resposta = await api(
+      eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo: payloadsDosClientes.SDCRM, autorizacao: BEARER })
+    );
+
+    expect(resposta.statusCode).toBe(201);
+    expect(JSON.parse(resposta.body).success).toBe(true);
+    expect(estado.mensagensFila).toHaveLength(0);
+    expect(estado.documentos[0].status).toBe('FAILED');
+    expect(estado.documentos[0].errorMessage).toBe('Falha ao processar o envio: sqs indisponível');
+  });
+
   it('em dev envia direto sem passar pela fila', async () => {
     process.env.STAGE = 'dev';
     const resposta = await api(

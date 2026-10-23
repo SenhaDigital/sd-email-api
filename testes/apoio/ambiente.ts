@@ -18,7 +18,8 @@ export const estado = {
   documentos: [] as any[],
   mensagensFila: [] as any[],
   emailsEnviados: [] as any[],
-  falharEnvio: false
+  falharEnvio: false,
+  falhasFila: 0
 };
 
 vi.mock('mongoose', () => {
@@ -74,6 +75,10 @@ vi.mock('mongoose', () => {
 vi.mock('@aws-sdk/client-sqs', () => ({
   SQS: class {
     async sendMessage(parametros: any) {
+      if (estado.falhasFila > 0) {
+        estado.falhasFila--;
+        throw new Error('sqs indisponível');
+      }
       estado.mensagensFila.push(parametros);
       return {};
     }
@@ -127,6 +132,7 @@ export function limparEstado() {
   estado.mensagensFila.length = 0;
   estado.emailsEnviados.length = 0;
   estado.falharEnvio = false;
+  estado.falhasFila = 0;
 }
 
 export async function carregarFuncao(nome: string) {

@@ -44,10 +44,35 @@ async function processarSemFila(jobId: string, solicitacao: SolicitacaoEmail) {
   logger.info(`Email processado localmente com status final: ${statusFinal}`);
 }
 
+const TENTATIVAS_FILA = 3;
+
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function publicarNaFila(jobId: string) {
   logger.info(`Ambiente de produção detectado - enviando para fila SQS: ${urlFilaValidacao}`);
-  await publicarJob(urlFilaValidacao, jobId, 'email-validation');
-  logger.info('Mensagem enviada com sucesso para a fila SQS');
+
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      await publicarJob(urlFilaValidacao, jobId, 'email-validation');
+      logger.info('Mensagem enviada com sucesso para a fila SQS');
+      return;
+    } catch (error) {
+      if (tentativa >= TENTATIVAS_FILA) throw error;
+      logger.warn(`Falha ao publicar o job ${jobId} na fila (tentativa ${tentativa}): ${error.message}`);
+      await esperar(100 * tentativa);
+    }
+  }
+}
+
+async function marcarFalha(jobId: string, motivo: string) {
+  try {
+    await jobsEmail.atualizar(jobId, {
+      status: StatusJobEmail.FALHOU,
+      errorMessage: motivo
+    });
+  } catch (error) {
+    logger.error(`Erro ao marcar o job ${jobId} como falho: ${error.message}`);
+  }
 }
 
 export async function enviar(event: APIGatewayProxyEvent) {
@@ -96,7 +121,8 @@ export async function enviar(event: APIGatewayProxyEvent) {
         await publicarNaFila(jobId);
       }
     } catch (error) {
-      logger.warn(`Erro ao enviar mensagem para fila ou processar localmente: ${error.message}`);
+      logger.error(`Erro ao enviar mensagem para fila ou processar localmente: ${error.message}`, { jobId });
+      await marcarFalha(jobId, `Falha ao processar o envio: ${error.message}`);
     }
 
     return respostaJson(
