@@ -44,7 +44,9 @@ describe('fila de validação', () => {
     await validacao(eventoFila('j2'), {} as any, () => undefined);
 
     expect(estado.documentos[0].status).toBe('VALIDATION_FAILED');
-    expect(estado.documentos[0].errorMessage).toContain('Email inválido');
+    expect(estado.documentos[0].errorMessage).toBe(
+      'Email inválido: x@semmx.com.br (Não foi possível verificar os registros MX do domínio)'
+    );
     expect(estado.mensagensFila).toHaveLength(0);
   });
 

@@ -37,7 +37,7 @@ async function validarJob(jobId: string) {
       await jobsEmail.atualizar(jobId, {
         status: StatusJobEmail.VALIDACAO_FALHOU,
         updatedAt: new Date(),
-        errorMessage: `Email inválido: ${resultado.invalidEmails.join(', ')}`
+        errorMessage: `Email inválido: ${resultado.invalidEmails.map((invalido) => `${invalido.email} (${invalido.reason})`).join(', ')}`
       });
 
       logger.info(`Validação falhou para o job ${jobId}: Todos os emails são inválidos`);
