@@ -36,6 +36,7 @@ Todas as rotas, exceto a documentação, exigem `Authorization: Bearer <chave>`.
   "subject": "Assunto",
   "html": "<p>Conteúdo</p>",
   "body": "Conteúdo em texto",
+  "fromName": "Nome exibido como remetente",
   "attachments": [
     { "filename": "arquivo.pdf", "content": "<base64>", "contentType": "application/pdf" }
   ]
@@ -44,7 +45,8 @@ Todas as rotas, exceto a documentação, exigem `Authorization: Bearer <chave>`.
 
 - Obrigatórios: `to`, `subject` e pelo menos um entre `body` e `html`.
 - `to` aceita um email, uma lista ou emails separados por vírgula.
-- O remetente é sempre o configurado em `DEFAULT_FROM_EMAIL`, com o nome "SD Consulta".
+- O endereço do remetente é sempre o configurado em `DEFAULT_FROM_EMAIL`. Um `from` enviado pelo cliente é ignorado.
+- O nome exibido é o `fromName` enviado (até 100 caracteres, sem quebras de linha). Sem `fromName`, usa `DEFAULT_FROM_NAME` ou, se não estiver definido, "SD Consulta".
 
 Respostas:
 

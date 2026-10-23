@@ -118,21 +118,50 @@ describe('POST /email/send', () => {
     expect(estado.documentos[0].status).toBe('FAILED');
   });
 
-  it('usa o remetente padrão e o nome SD Consulta', async () => {
+  const enviarDev = (corpo: any) => {
     process.env.STAGE = 'dev';
-    await api(
-      eventoHttp({
-        metodo: 'POST',
-        caminho: '/api/email/send',
-        corpo: payloadsDosClientes['api-sdgs-agenda'],
-        autorizacao: BEARER
-      })
-    );
+    return api(eventoHttp({ metodo: 'POST', caminho: '/api/email/send', corpo, autorizacao: BEARER }));
+  };
+
+  it('usa o nome enviado pelo sistema', async () => {
+    await enviarDev(payloadsDosClientes['api-sdgs-agenda']);
 
     expect(estado.emailsEnviados[0].from).toEqual({
-      name: 'SD Consulta',
+      name: 'Agendamento Senha Digital',
       address: 'no.reply@senhadigital.com.br'
     });
+    expect(estado.documentos[0].emailRequest.fromName).toBe('Agendamento Senha Digital');
+  });
+
+  it('usa SD Consulta quando o sistema não envia nome', async () => {
+    await enviarDev(payloadsDosClientes.SDCRM);
+
+    expect(estado.emailsEnviados[0].from.name).toBe('SD Consulta');
+  });
+
+  it('usa DEFAULT_FROM_NAME quando configurado e o sistema não envia nome', async () => {
+    process.env.DEFAULT_FROM_NAME = 'Senha Digital';
+    try {
+      await enviarDev(payloadsDosClientes.SDCRM);
+      expect(estado.emailsEnviados[0].from.name).toBe('Senha Digital');
+    } finally {
+      delete process.env.DEFAULT_FROM_NAME;
+    }
+  });
+
+  it('remove quebras de linha e limita o nome a 100 caracteres', async () => {
+    await enviarDev({ ...payloadsDosClientes.SDCRM, fromName: `Nome\r\nBcc: x@y.com ${'a'.repeat(200)}` });
+
+    const nome = estado.emailsEnviados[0].from.name;
+    expect(nome).not.toMatch(/[\r\n]/);
+    expect(nome.length).toBe(100);
+    expect(nome.startsWith('Nome Bcc: x@y.com')).toBe(true);
+  });
+
+  it('ignora fromName que não é texto', async () => {
+    await enviarDev({ ...payloadsDosClientes.SDCRM, fromName: { nome: 'x' } });
+
+    expect(estado.emailsEnviados[0].from.name).toBe('SD Consulta');
   });
 
   it('ignora o remetente enviado pelo cliente', async () => {

@@ -34,6 +34,9 @@ export const ambiente = {
   get nivelLog() {
     return process.env.LOG_LEVEL || 'info';
   },
+  get nomeRemetentePadrao() {
+    return (process.env.DEFAULT_FROM_NAME || '').trim() || 'SD Consulta';
+  },
   get remetentePadrao() {
     return process.env.DEFAULT_FROM_EMAIL || 'noreply@example.com';
   },

@@ -12,6 +12,12 @@ const urlFilaValidacao = urlDaFila(ambiente.filaValidacao);
 
 logger.info(`Construindo URL da fila SQS: ${urlFilaValidacao}`);
 
+function limparNomeRemetente(valor: unknown): string | undefined {
+  if (typeof valor !== 'string') return undefined;
+  const nome = valor.replace(/[\r\n]+/g, ' ').trim().slice(0, 100);
+  return nome || undefined;
+}
+
 async function processarSemFila(jobId: string, solicitacao: SolicitacaoEmail) {
   logger.info('Ambiente local detectado - executando envio de email diretamente sem SQS');
 
@@ -46,7 +52,7 @@ async function publicarNaFila(jobId: string) {
 
 export async function enviar(event: APIGatewayProxyEvent) {
   try {
-    const { to, subject, body, html, attachments } = JSON.parse(event.body || '{}');
+    const { to, subject, body, html, fromName, attachments } = JSON.parse(event.body || '{}');
 
     if (!to || !subject || (!body && !html)) {
       return respostaJson(400, {
@@ -56,7 +62,14 @@ export async function enviar(event: APIGatewayProxyEvent) {
     }
 
     const jobId = uuidv4();
-    const solicitacao: SolicitacaoEmail = { to, subject, body, html, attachments };
+    const solicitacao: SolicitacaoEmail = {
+      to,
+      subject,
+      body,
+      html,
+      fromName: limparNomeRemetente(fromName),
+      attachments
+    };
 
     const job: JobEmail = {
       id: jobId,

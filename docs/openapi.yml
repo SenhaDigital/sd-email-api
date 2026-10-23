@@ -189,6 +189,10 @@ components:
         html:
           type: string
           description: Conteúdo em HTML.
+        fromName:
+          type: string
+          maxLength: 100
+          description: Nome exibido como remetente. Sem ele, usa DEFAULT_FROM_NAME ou "SD Consulta".
         attachments:
           type: array
           description: Lista de anexos codificados em Base64.

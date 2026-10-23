@@ -26,7 +26,7 @@ export async function enviarEmail(solicitacao: SolicitacaoEmail): Promise<Result
     const transporte = criarTransporte();
 
     const emailRemetente = ambiente.remetentePadrao;
-    const nomeRemetente = solicitacao.fromName || 'SD Consulta';
+    const nomeRemetente = solicitacao.fromName || ambiente.nomeRemetentePadrao;
 
     const info = await transporte.sendMail({
       from: {
