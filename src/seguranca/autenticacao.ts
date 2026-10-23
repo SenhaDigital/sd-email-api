@@ -41,15 +41,6 @@ export const comAutenticacao = (funcao: FuncaoHttp): FuncaoHttp => {
       return naoAutorizado('Cabeçalho Authorization não fornecido');
     }
 
-    if (/^AWS4-HMAC-SHA256/i.test(cabecalho)) {
-      logger.warn('Requisição aceita via cabeçalho AWS Signature v4', {
-        ip: event.requestContext.identity?.sourceIp,
-        userAgent: event.requestContext.identity?.userAgent,
-        path: event.path
-      });
-      return funcao(event);
-    }
-
     const chavesApi = ambiente.chavesApi;
 
     if (chavesApi.length === 0) {

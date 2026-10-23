@@ -255,9 +255,11 @@ describe('autenticação', () => {
     expect(JSON.parse(resposta.body).message).toBe('Formato de Authorization inválido');
   });
 
-  it('ainda aceita cabeçalho AWS4-HMAC-SHA256', async () => {
+  it('recusa cabeçalho AWS4-HMAC-SHA256', async () => {
     const resposta = await envio('AWS4-HMAC-SHA256 Credential=qualquer');
-    expect(resposta.statusCode).toBe(201);
+    expect(resposta.statusCode).toBe(401);
+    expect(JSON.parse(resposta.body).message).toBe('Formato de Authorization inválido');
+    expect(estado.documentos).toHaveLength(0);
   });
 
   it('aceita chaves adicionais de API_SDSEND_KEYS sem invalidar a principal', async () => {
