@@ -11,7 +11,9 @@
     "logs:validator": "serverless logs -f processEmail --tail",
     "logs:sender": "serverless logs -f sendEmail --tail",
     "remove": "serverless remove",
-    "build": "tsc"
+    "build": "tsc",
+    "predeploy:dev": "node scripts/checarNpm.js",
+    "predeploy:prod": "node scripts/checarNpm.js"
   },
   "keywords": [],
   "author": "",

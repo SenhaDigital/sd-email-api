@@ -108,4 +108,6 @@ AWS_PROFILE=DEV_SD npm run deploy:dev
 AWS_PROFILE=PROD_SD_2 npm run deploy:prod
 ```
 
+O deploy precisa do Node 20 com npm 10 (`.nvmrc`). Com npm mais novo o Serverless gera o pacote sem as dependências, e o script de deploy se recusa a rodar.
+
 As variáveis de cada stage vêm de `env.<stage>.yml`.
