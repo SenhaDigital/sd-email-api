@@ -1,7 +1,8 @@
 import winston from 'winston';
+import { ambiente } from '../config/ambiente';
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: ambiente.nivelLog,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
