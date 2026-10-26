@@ -43,6 +43,7 @@ provider:
 package:
   patterns:
     - docs/openapi.yml
+    - '!node_modules/.vite/**'
 
 functions:
   api:
