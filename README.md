@@ -96,12 +96,18 @@ Os nomes das funções no `serverless.yml` (`api`, `processEmail` e `sendEmail`)
 Requer Node 20 ou superior.
 
 ```bash
-npm install
+npm ci
 npm test
 npx tsc --noEmit -p .
 ```
 
 ## Deploy
+
+Pelo GitHub Actions: aba Actions, workflow **Deploy**, botão *Run workflow* e escolha do ambiente. Antes do deploy ele roda a checagem de tipos e os testes. Prod só pode ser publicado a partir da `main`.
+
+O workflow usa os secrets `AWS_DEV_ACCESS_KEY_ID`, `AWS_DEV_SECRET_ACCESS_KEY`, `AWS_PROD_ACCESS_KEY_ID` e `AWS_PROD_SECRET_ACCESS_KEY`, de usuários IAM com permissão para fazer deploy do stack do Serverless em cada conta.
+
+Pela máquina local:
 
 ```bash
 AWS_PROFILE=DEV_SD npm run deploy:dev
