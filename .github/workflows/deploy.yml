@@ -1,0 +1,56 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Ambiente
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+concurrency:
+  group: deploy-${{ inputs.stage }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bloqueia prod fora da main
+        if: inputs.stage == 'prod' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Deploy em prod só pode ser feito a partir da branch main."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - run: npx tsc --noEmit -p .
+
+      - run: npm test
+
+      - name: Configura credenciais AWS
+        env:
+          CHAVE: ${{ inputs.stage == 'prod' && secrets.AWS_PROD_ACCESS_KEY_ID || secrets.AWS_DEV_ACCESS_KEY_ID }}
+          SEGREDO: ${{ inputs.stage == 'prod' && secrets.AWS_PROD_SECRET_ACCESS_KEY || secrets.AWS_DEV_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -z "$CHAVE" ] || [ -z "$SEGREDO" ]; then
+            echo "Credenciais AWS de ${{ inputs.stage }} não configuradas nos secrets do repositório."
+            exit 1
+          fi
+          mkdir -p ~/.aws
+          printf '[ci]\naws_access_key_id=%s\naws_secret_access_key=%s\n' "$CHAVE" "$SEGREDO" > ~/.aws/credentials
+
+      - name: Deploy
+        env:
+          AWS_PROFILE: ci
+        run: npm run deploy:${{ inputs.stage }}
